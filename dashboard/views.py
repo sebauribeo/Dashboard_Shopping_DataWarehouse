@@ -27,11 +27,7 @@ def home(request):
 
 #  ----------Ventas por Tipo de Producto por Mes----------
     shopping_carts = H_Shopping_Cart.objects.all()
-
-    # Crear un diccionario para almacenar las ventas por producto por mes
     ventas_por_producto_por_mes = {}
-
-    # Iterar sobre cada venta en el carrito de compras
     for cart in shopping_carts:
         # Obtener el mes y el año de la fecha de la orden
         mes_ano = cart.order_date.strftime('%Y-%m')
@@ -60,22 +56,13 @@ def home(request):
     # Crear la figura del gráfico de barras
     fig = go.Figure(data=data)
     fig.update_layout(barmode='group', xaxis_title='Mes-Año', yaxis_title='Ventas')
-
-    # Generar el gráfico de barras como HTML
     div_ventas_producto_por_mes = plot(fig, output_type='div', include_plotlyjs=False)
 
 
-#  ----------Top 10 Ventas Semanales por edad----------
 #  ----------Distribución de Edades de los Compradores----------
     shopping_carts = H_Shopping_Cart.objects.all()
-
-    # Obtener los IDs únicos de los clientes en las ventas del carrito de compras
     customer_ids = shopping_carts.values_list('customer_id', flat=True).distinct()
-
-    # Obtener la fecha actual
     fecha_actual = datetime.now()
-
-    # Calcular la edad de cada cliente
     edades = []
     for customer_id in customer_ids:
         # Obtener el cliente
@@ -83,13 +70,11 @@ def home(request):
         
         # Calcular la edad del cliente
         edad = fecha_actual.year - customer.age
-        
         edades.append(edad)
 
     # Calcular la distribución de edades
     distribucion_edades = {}
     for edad in edades:
-        # Obtener o crear una entrada para la edad en el diccionario
         if edad not in distribucion_edades:
             distribucion_edades[edad] = 0
         
@@ -106,17 +91,11 @@ def home(request):
     # Crear el gráfico de barras
     fig = go.Figure([go.Bar(x=x, y=y)])
     fig.update_layout(xaxis_title='Edad', yaxis_title='Número de clientes')
-
-    # Generar el gráfico de barras como HTML
     div_distribucion_edades = plot(fig, output_type='div', include_plotlyjs=False)
 
 #  ----------Ventas por Ubicación Geográfica----------
     shopping_carts = H_Shopping_Cart.objects.all()
-
-    # Crear una lista para almacenar las ubicaciones geográficas de los clientes
     ubicaciones = []
-
-    # Iterar sobre cada venta en el carrito de compras
     for cart in shopping_carts:
         # Obtener el cliente asociado a la venta
         customer = D_Customers.objects.get(customer_id=cart.customer_id)
@@ -130,17 +109,12 @@ def home(request):
     # Crear el histograma de ventas por ubicación geográfica
     fig = go.Figure(data=[go.Histogram(x=ubicaciones)])
     fig.update_layout(xaxis_title='Ubicación', yaxis_title='Número de Ventas')
-
-    # Generar el histograma como HTML
     div_histograma_ventas_por_ubicacion = plot(fig, output_type='div', include_plotlyjs=False)
+
 
 #  ----------Tendencia de Compra----------
     shopping_carts = H_Shopping_Cart.objects.all()
-
-    # Crear un diccionario para almacenar las ventas por período de tiempo
     ventas_por_periodo = {}
-
-    # Iterar sobre cada venta en el carrito de compras
     for cart in shopping_carts:
         # Obtener el mes y año de la fecha de la orden
         periodo = cart.order_date.strftime('%Y-%m')
@@ -162,15 +136,8 @@ def home(request):
     # Crear el gráfico de líneas
     fig = go.Figure(data=go.Scatter(x=x, y=y, mode='lines'))
     fig.update_layout(xaxis_title='Período', yaxis_title='Número de Ventas')
-
-    # Generar el gráfico de líneas como HTML
     div_tendencia_compra = plot(fig, output_type='div', include_plotlyjs=False)
 
-#  ----------Ventas por Método de Pago----------
-
-
-
-    # Renderizar la plantilla y pasar el gráfico de Plotly
     return render(request, 'dashboards/home.html', {
         'div_genero': div_genero,
         'div_ventas_producto_por_mes': div_ventas_producto_por_mes,
