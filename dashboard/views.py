@@ -4,7 +4,8 @@ import plotly.graph_objs as go
 from plotly.offline import plot
 from datetime import datetime
 from django.db.models import Sum
-
+from collections import Counter
+from django.db.models.functions import TruncMonth
 
 
 def home(request):
@@ -61,24 +62,32 @@ def home(request):
 
 #  ----------Distribución de Edades de los Compradores----------
     shopping_carts = H_Shopping_Cart.objects.all()
+
+    # Obtener una lista de IDs únicos de clientes
     customer_ids = shopping_carts.values_list('customer_id', flat=True).distinct()
     fecha_actual = datetime.now()
-    edades = []
+
+    # Crear una lista para almacenar las edades actuales de los clientes
+    edades_actuales = []
+
+    # Iterar sobre cada cliente
     for customer_id in customer_ids:
         # Obtener el cliente
         customer = D_Customers.objects.get(customer_id=customer_id)
-        
-        # Calcular la edad del cliente
-        edad = fecha_actual.year - customer.age
-        edades.append(edad)
+
+        # Calcular la edad actual del cliente
+        edad_actual = fecha_actual.year - customer.age
+
+        # Agregar la edad actual a la lista
+        edades_actuales.append(edad_actual)
 
     # Calcular la distribución de edades
     distribucion_edades = {}
-    for edad in edades:
+
+    # Contar el número de clientes en cada edad
+    for edad in edades_actuales:
         if edad not in distribucion_edades:
             distribucion_edades[edad] = 0
-        
-        # Incrementar el contador de la edad
         distribucion_edades[edad] += 1
 
     # Ordenar el diccionario por claves (edades) en orden ascendente
@@ -90,8 +99,11 @@ def home(request):
 
     # Crear el gráfico de barras
     fig = go.Figure([go.Bar(x=x, y=y)])
-    fig.update_layout(xaxis_title='Edad', yaxis_title='Número de clientes')
+    fig.update_layout(xaxis_title='Año de nacimiento', yaxis_title='Número de Clientes')
+
+    # Generar el gráfico de barras como HTML
     div_distribucion_edades = plot(fig, output_type='div', include_plotlyjs=False)
+
 
 #  ----------Ventas por Ubicación Geográfica----------
     shopping_carts = H_Shopping_Cart.objects.all()
@@ -138,11 +150,73 @@ def home(request):
     fig.update_layout(xaxis_title='Período', yaxis_title='Número de Ventas')
     div_tendencia_compra = plot(fig, output_type='div', include_plotlyjs=False)
 
+
+#------------Top 10 de Personas que Más Compras Han Realizado------------
+    shopping_carts = H_Shopping_Cart.objects.all()
+
+    # Obtener una lista de los nombres de las personas que han realizado compras
+    nombres_compradores = [cart.customer_name for cart in shopping_carts]
+
+    # Contar cuántas compras ha realizado cada persona y obtener el top 10
+    top_nombres_compradores = Counter(nombres_compradores).most_common(10)
+
+    # Separar los nombres y las cantidades en listas separadas
+    nombres_top_10 = [nombre for nombre, cantidad in top_nombres_compradores]
+    cantidades_top_10 = [cantidad for nombre, cantidad in top_nombres_compradores]
+
+    # Crear el gráfico de barras
+    fig = go.Figure([go.Bar(x=nombres_top_10, y=cantidades_top_10)])
+    fig.update_layout(xaxis_title='Nombre del Comprador', yaxis_title='Número de Compras')
+    div_top_10_compradores = plot(fig, output_type='div', include_plotlyjs=False)
+
+
+    #----------Cantidad de Ventas por Nombre de Producto----------
+    shopping_carts = H_Shopping_Cart.objects.all()
+    product_ids = shopping_carts.values_list('product_id', flat=True).distinct()
+
+    # Obtener los nombres de los productos vendidos
+    nombres_productos = [D_Products.objects.get(product_id=product_id).product_name for product_id in product_ids]
+
+    # Contar cuántas veces se ha vendido cada producto
+    ventas_por_producto = Counter(nombres_productos)
+
+    # Crear los datos necesarios para el gráfico de pastel
+    labels = list(ventas_por_producto.keys())
+    values = list(ventas_por_producto.values())
+
+    # Crear el gráfico de pastel
+    fig = go.Figure(data=[go.Pie(labels=labels, values=values)])
+    div_ventas_por_producto = plot(fig, output_type='div', include_plotlyjs=False)
+
+
+#----------Cantidad de Productos por Talla----------
+    shopping_carts = H_Shopping_Cart.objects.all()
+
+    # Obtener una lista de todas las tallas de los productos vendidos
+    tallas = [cart.product.size for cart in shopping_carts if cart.product]
+
+    # Contar cuántos productos hay por talla
+    productos_por_talla = Counter(tallas)
+
+    # Crear una lista de colores para cada talla
+    colores = ['rgb(31, 119, 180)', 'rgb(255, 127, 14)', 'rgb(44, 160, 44)', 'rgb(214, 39, 40)', 'rgb(148, 103, 189)', 'rgb(140, 86, 75)', 'rgb(227, 119, 194)', 'rgb(127, 127, 127)', 'rgb(188, 189, 34)', 'rgb(23, 190, 207)']
+
+    # Crear los datos necesarios para el gráfico de barras
+    x = list(productos_por_talla.keys())
+    y = list(productos_por_talla.values())
+
+    # Crear el gráfico de barras
+    fig = go.Figure(data=[go.Bar(x=x, y=y, marker=dict(color=colores))])
+    fig.update_layout(xaxis_title='Talla', yaxis_title='Cantidad')
+    div_productos_por_talla = plot(fig, output_type='div', include_plotlyjs=False)
+
     return render(request, 'dashboards/home.html', {
         'div_genero': div_genero,
         'div_ventas_producto_por_mes': div_ventas_producto_por_mes,
         'div_distribucion_edades': div_distribucion_edades,
         'div_histograma_ventas_por_ubicacion': div_histograma_ventas_por_ubicacion,
         'div_tendencia_compra': div_tendencia_compra,
-        
+        'div_top_10_compradores': div_top_10_compradores,
+        'div_ventas_por_producto':div_ventas_por_producto,
+        'div_productos_por_talla': div_productos_por_talla,
         })
