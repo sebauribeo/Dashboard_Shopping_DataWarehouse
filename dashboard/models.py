@@ -58,12 +58,7 @@ class H_Shopping_Cart(models.Model):
         product = models.ForeignKey(D_Products, on_delete=models.CASCADE)
         order = models.ForeignKey(D_Orders, on_delete=models.CASCADE)
         customer = models.ForeignKey(D_Customers, on_delete=models.CASCADE)
-        customer_name = models.CharField(max_length=200)
-        gender = models.CharField(max_length=100)
-        age = models.IntegerField()
-        home_address = models.CharField(max_length=500)
-        city = models.CharField(max_length=200)
-        order_date = models.DateField()
+        shopping_date = models.DateField()
 
     except Exception as e:
         print('Modelo no creado: ', e)
