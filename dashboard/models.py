@@ -19,7 +19,7 @@ class D_Customers(models.Model):
         age = models.IntegerField()
         home_address = models.CharField(max_length=500)
         zip_code = models.IntegerField()
-        city = models.CharField(max_length=200)
+        city = models.CharField(max_length=250)
         state = models.CharField(max_length=150)
         country = models.CharField(max_length=150)
 
