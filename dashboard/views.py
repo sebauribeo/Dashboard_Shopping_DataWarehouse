@@ -9,7 +9,7 @@ from django.db.models.functions import TruncDay
 import pandas as pd
 import numpy as np
 
-def home(request):
+def dashboard(request):
 
 # ----------¿EN QUÉ DÍAS SE GENERAN MÁS TRANSACCIONES?----------
 
@@ -142,7 +142,7 @@ def home(request):
             'xanchor': 'center',
             'yanchor': 'top', 
             'font': {
-                'size': 20 
+                'size': 18 
             }
         },  
         xaxis_title='Fecha',
@@ -153,7 +153,16 @@ def home(request):
 
     div_recurrentes = plot(fig, output_type='div', include_plotlyjs=False)
 
-# ----------¿IDENTIFICAR SITUACIONES DE BORDE?----------
+    return render(request, 'dashboards/dashboard.html', {
+        'div_transacciones': div_transacciones,
+        'div_elementos': div_elementos,
+        'div_elementos_top_10': div_elementos_top_10,
+        'div_recurrentes': div_recurrentes,
+        })
+
+def casosBorde(request):
+
+    # ----------¿IDENTIFICAR SITUACIONES DE BORDE?----------
 #-----------------------------------------------------------------------------------------------------------------
     # Obtener transacciones con cantidades extremas
     extreme_transactions = (H_Shopping_Cart.objects
@@ -372,18 +381,14 @@ def home(request):
 
     div_duplicate_chart = plot(fig, output_type='div', include_plotlyjs=False)
 
-
-    return render(request, 'dashboards/home.html', {
-        'div_transacciones': div_transacciones,
-        'div_elementos': div_elementos,
-        'div_elementos_top_10': div_elementos_top_10,
-        'div_recurrentes': div_recurrentes,
+    return render(request, 'dashboards/casosBorde.html', {
         'div_extreme_transactions': div_extreme_transactions,
         'div_quantity_distribution': div_quantity_distribution,
         'div_daily_sales_trend': div_daily_sales_trend,
         'div_null_chart': div_null_chart,
         'div_duplicate_chart': div_duplicate_chart
         })
+
 
 def get_null_info(model):
     # Obtener información sobre datos nulos en el modelo
@@ -401,3 +406,171 @@ def generate_color_palette(num_colors):
         '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
     ])
     return palette[:num_colors].tolist()
+
+
+def masTransacciones(request):
+
+# ----------¿EN QUÉ DÍAS SE GENERAN MÁS TRANSACCIONES?----------
+
+    # Obtener los días con más transacciones
+    top_days = (H_Shopping_Cart.objects
+                .annotate(day=TruncDay('shopping_date'))
+                .values('day')
+                .annotate(count=Count('sales_id'))
+                .order_by('-count')[:10])
+
+    # Extraer los datos para el gráfico
+    days = [entry['day'] for entry in top_days]
+    counts = [entry['count'] for entry in top_days]
+    
+    # Formatear las fechas como cadenas legibles
+    formatted_dates = [day.strftime('%Y-%m-%d') for day in days]
+
+    # Crear el gráfico de líneas utilizando Plotly
+    fig = go.Figure(data=[go.Scatter(x=counts, y=formatted_dates, mode='lines+markers')])
+    fig.update_layout(
+        title={
+            'text': 'Días con Más Transacciones',
+            'y': 0.9, 
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top', 
+            'font': {
+                'size': 24 
+            }
+        },
+        xaxis_title='Cantidad de Transacciones',
+        yaxis_title='Fechas',
+        xaxis=dict(tickmode='linear')
+    )
+
+    div_transacciones = plot(fig, output_type='div', include_plotlyjs=False)
+
+
+    return render(request, 'dashboards/masTransacciones.html', {
+        'div_transacciones': div_transacciones,
+        })
+
+def masRecurrentes(request):
+
+# ----------¿QUÉ ELEMENTOS SON LOS MÁS RECURRENTES?----------
+
+    # Obtener los elementos más recurrentes
+    most_common_elements = H_Shopping_Cart.objects.values('product_id').annotate(count=Count('product_id')).order_by('-count')[:10]
+    
+    # Extraer los datos para el gráfico
+    element_ids = [entry['product_id'] for entry in most_common_elements]
+    counts = [entry['count'] for entry in most_common_elements]
+    
+    # Obtener los nombres de los productos correspondientes a los IDs
+    product_names = [D_Products.objects.get(product_id=product_id).product_name for product_id in element_ids]
+    
+    # Crear el gráfico de barras utilizando Plotly
+    fig = go.Figure(data=[go.Bar(x=product_names, y=counts)])
+    fig.update_layout(
+        title={
+            'text': 'Elementos Más Recurrentes',
+            'y': 0.9, 
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top', 
+            'font': {
+                'size': 24 
+            }
+        },
+        xaxis_title='Nombre del Producto',
+        yaxis_title='Cantidad de Repeticiones',
+        xaxis=dict(tickmode='linear')
+    )
+    
+    div_elementos = plot(fig, output_type='div', include_plotlyjs=False)
+
+    return render(request, 'dashboards/masRecurrentes.html', {
+        'div_elementos': div_elementos,
+        })
+
+def top10(request):
+
+# ----------¿CUÁLES ELEMENTOS SON LOS MÁS RECURRENTES DENTRO DEL TOP 10?----------
+
+    # Obtener los elementos más recurrentes en product_id
+    most_common_elements = H_Shopping_Cart.objects.values('product_id').annotate(count=Count('product_id')).order_by('-count')[:17]
+    
+    # Extraer los datos para el gráfico
+    element_ids = [entry['product_id'] for entry in most_common_elements]
+    counts = [entry['count'] for entry in most_common_elements]
+    
+    # Obtener los nombres de los productos correspondientes a los IDs
+    product_names = [D_Products.objects.get(product_id=product_id).product_name for product_id in element_ids]
+    
+    # Crear el gráfico de pastel utilizando Plotly
+    fig = go.Figure(data=[go.Pie(labels=product_names, values=counts)])
+    fig.update_layout(
+        title={
+            'text': 'Top 10 Elementos Más Recurrentes',
+            'y': 0.9, 
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top', 
+            'font': {
+                'size': 24 
+            }
+        },
+    )
+    
+    div_elementos_top_10 = plot(fig, output_type='div', include_plotlyjs=False)
+
+    return render(request, 'dashboards/top10.html', {
+        'div_elementos_top_10': div_elementos_top_10,
+        })
+
+def masTranRecu(request):
+
+# ----------¿EN QUÉ DÍAS SE REALIZAN MÁS TRANSACCIONES DE LOS ELEMENTOS MÁS RECURRENTES?----------
+
+    # Obtener los datos de la consulta SQL
+    query_results = (H_Shopping_Cart.objects
+                     .values('shopping_date', 'product__product_name')
+                     .annotate(transaction_count=Count('*'))
+                     .order_by('-transaction_count')[:10])
+
+    # Preparar los datos para el gráfico
+    transaction_dates = [result['shopping_date'] for result in query_results]
+    product_names = [result['product__product_name'] for result in query_results]
+    transaction_counts = [result['transaction_count'] for result in query_results]
+
+    # Crear el gráfico de dispersión utilizando Plotly
+    fig = go.Figure()
+
+    for date, product, count in zip(transaction_dates, product_names, transaction_counts):
+        fig.add_trace(go.Scatter(
+            x=[date],
+            y=[product],
+            mode='markers',
+            marker=dict(size=[count], sizemode='area', sizeref=2.*max(transaction_counts)/(40.**2), sizemin=4),
+            text=f'{count} transacciones',
+            name=product
+        ))
+
+    fig.update_layout(
+        title={
+            'text': 'Días con Más Transacciones de los Productos Más Recurrentes',
+            'y': 0.9, 
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top', 
+            'font': {
+                'size': 18 
+            }
+        },  
+        xaxis_title='Fecha',
+        yaxis_title='Producto',
+        showlegend=True
+        
+    )
+
+    div_recurrentes = plot(fig, output_type='div', include_plotlyjs=False)
+
+    return render(request, 'dashboards/masTranRecu.html', {
+        'div_recurrentes': div_recurrentes,
+        })
